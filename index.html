@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Hall Visualizer</title>
+  
+  <!-- External Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- External Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/1.4.0/chartjs-plugin-annotation.min.js"></script>
+  
+  <!-- Local Assets -->
+  <link rel="stylesheet" href="style.css">
+  <script src="calculator.js" defer></script>
+</head>
+
+<body>
+  <main>
+    <!-- Header Section -->
+    <header>
+      <h1>Data Hall Visualizer</h1>
+    </header>
+
+    <!-- Visualization Dashboard -->
+    <section class="visualization horizontal-layout">
+      <!-- Data Hall Layout Panel -->
+      <div class="viz-panel" id="viz-datahall">
+        <h2>Data Hall Layout</h2>
+        <div class="white-space-container">
+          <canvas id="rackCanvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Cooling Strategy Chart Panel -->
+      <div class="viz-panel" id="viz-chart">
+        <h2>Cooling Strategy Tradeoff</h2>
+        <div class="chart-container">
+          <canvas id="ahuCduChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Future Expansion Panel -->
+      <div class="viz-panel" id="viz-spare">
+        <h2>Reserved for Expansion</h2>
+        <p class="placeholder-text">[Future metrics or visualization]</p>
+      </div>
+    </section>
+
+    <!-- Main Content Area -->
+    <div class="content">
+      <!-- Configuration Settings Panel -->
+      <aside class="settings">
+        <div class="panel-title">Configuration Settings</div>
+        
+        <div class="settings-grid">
+          <!-- Data Hall Configuration Card -->
+          <div class="control-group">
+            <h3>Data Hall Configuration</h3>
+            
+            <label for="hall-size">Data Hall Size (MW IT):</label>
+            <select id="hall-size">
+              <option value="3">3 MW</option>
+              <option value="4.5">4.5 MW</option>
+              <option value="6" selected>6 MW</option>
+              <option value="7.5">7.5 MW</option>
+              <option value="9">9 MW</option>
+              <option value="10.5">10.5 MW</option>
+              <option value="12">12 MW</option>
+            </select>
+
+            <label for="rack-spacing">Rack Row Spacing:</label>
+            <select id="rack-spacing">
+              <option value="3">1.6m</option>
+              <option value="4.5" selected>1.8m</option>
+              <option value="6">2.0m</option>
+            </select>
+
+            <label for="racks-per-row">Racks per Row:</label>
+            <select id="racks-per-row">
+              <option value="20">20</option>
+              <option value="25" selected>25</option>
+            </select>
+          </div>
+
+          <!-- Cooling Solutions Card -->
+          <div class="control-group">
+            <h3>Cooling Solutions</h3>
+            
+            <label for="cooling-slider">Cooling Ratio:</label>
+            <div class="slider-wrapper">
+              <input type="range" id="cooling-slider" min="0" max="100" step="10" value="0">
+              <div class="slider-mask"></div>
+            </div>
+            
+            <div class="toggle-container">
+              <label class="switch-label">
+                <input type="checkbox" id="lc-override">
+                <span class="slider-toggle"></span>
+                <span class="label-text">Allow 100% Liquid Cooling</span>
+              </label>
+            </div>
+            
+            <div class="slider-labels">
+              <span>100% AC</span>
+              <span id="cooling-label-dynamic">100% / 0%</span>
+              <span>100% LC</span>
+            </div>
+          </div>
+
+          <!-- Equipment Sizing Card -->
+          <div class="control-group">
+            <h3>Equipment Sizing</h3>
+            
+            <label for="rack-density-cpu">CPU Rack Power Density (kW):</label>
+            <select id="rack-density-cpu">
+              <option value="15">15</option>
+              <option value="17.5">17.5</option>
+              <option value="20" selected>20</option>
+              <option value="25">25</option>
+              <option value="30">30</option>
+              <option value="40">40</option>
+              <option value="50">50</option>
+              <option value="75">75</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+              <option value="300">300</option>
+              <option value="500">500</option>
+              <option value="750">750</option>
+              <option value="1000">1000</option>
+            </select>
+
+            <label for="rack-density-gpu">GPU Rack Power Density (kW):</label>
+            <select id="rack-density-gpu">
+              <option value="15">15</option>
+              <option value="17.5">17.5</option>
+              <option value="20">20</option>
+              <option value="25">25</option>
+              <option value="30">30</option>
+              <option value="40">40</option>
+              <option value="50">50</option>
+              <option value="75">75</option>
+              <option value="100" selected>100</option>
+              <option value="200">200</option>
+              <option value="300">300</option>
+              <option value="500">500</option>
+              <option value="750">750</option>
+              <option value="1000">1000</option>
+            </select>
+
+            <label for="ahu-capacity">AHU Capacity (kW/unit):</label>
+            <select id="ahu-capacity">
+              <option value="175">175</option>
+              <option value="250" selected>250</option>
+              <option value="300">300</option>
+              <option value="500">500</option>
+              <option value="700">700</option>
+            </select>
+
+            <label for="cdu-central-capacity">Central CDU Capacity (kW/unit):</label>
+            <select id="cdu-central-capacity">
+              <option value="200">200</option>
+              <option value="500">500</option>
+              <option value="1000">1000</option>
+              <option value="2500">2500</option>
+              <option value="5000">5000</option>
+              <option value="10000">10000</option>
+            </select>
+
+            <label for="cdu-inrow-capacity">In-Row CDU Capacity (kW/unit):</label>
+            <select id="cdu-inrow-capacity">
+              <option value="60">60</option>
+              <option value="150">150</option>
+              <option value="500">500</option>
+              <option value="1000">1000</option>
+            </select>
+          </div>
+
+          <!-- Customer Specifications Card -->
+          <div class="control-group">
+            <h3>Customer Specifications</h3>
+            
+            <label for="cpu-gpu-slider">CPU / GPU Ratio:</label>
+            <input type="range" id="cpu-gpu-slider" min="0" max="100" step="10" value="0">
+            <div class="slider-labels">
+              <span>100% CPU</span>
+              <span id="cpu-gpu-label">100% / 0%</span>
+              <span>100% GPU</span>
+            </div>
+
+            <label for="acr-cpu">Air Capture Rate (CPU Profile):</label>
+            <input type="range" id="acr-cpu" min="50" max="60" step="1" value="55">
+            <div class="slider-labels">
+              <span>50%</span>
+              <span>55%</span>
+              <span>60%</span>
+            </div>
+
+            <label for="acr-gpu">Air Capture Rate (GPU Profile):</label>
+            <input type="range" id="acr-gpu" min="80" max="90" step="1" value="85">
+            <div class="slider-labels">
+              <span>80%</span>
+              <span>85%</span>
+              <span>90%</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Results Panel -->
+      <aside class="results">
+        <div class="panel-title">Calculation Results</div>
+        
+        <div class="results-container two-columns">
+          <!-- IT Load Breakdown Card -->
+          <div class="result-card">
+            <h3>IT Load (MW) <span class="result-header-total" id="result-total-load">-</span></h3>
+            <div class="result-row">
+              <span>Air Cooled Load:</span>
+              <span id="result-ac-load">-</span>
+            </div>
+            <div class="result-row">
+              <span>Liquid Cooled Load:</span>
+              <span id="result-lc-load">-</span>
+            </div>
+          </div>
+
+          <!-- Rack Counts Card -->
+          <div class="result-card">
+            <h3>Total Racks <span class="result-header-total" id="result-rack-total">-</span></h3>
+            <div class="result-row">
+              <span>AC Racks (CPU):</span>
+              <span id="result-rack-cpu">-</span>
+            </div>
+            <div class="result-row">
+              <span>AC Racks (GPU):</span>
+              <span id="result-rack-gpu">-</span>
+            </div>
+            <div class="result-row">
+              <span>LC Racks:</span>
+              <span id="result-rack-lc">-</span>
+            </div>
+          </div>
+
+          <!-- Cooling Units Card -->
+          <div class="result-card">
+            <h3>Cooling Units</h3>
+            <div class="result-row">
+              <span>AHUs:</span>
+              <span id="result-ahu">-</span>
+            </div>
+            <div class="result-row">
+              <span>CDU (Central):</span>
+              <span id="result-cdu-central">-</span>
+            </div>
+            <div class="result-row">
+              <span>CDU (In-row):</span>
+              <span id="result-cdu-inrow">-</span>
+            </div>
+          </div>
+
+          <!-- Assumptions Card -->
+          <div class="result-card assumptions">
+            <h3>Assumptions</h3>
+            <div class="result-row">
+              <span>CPU/GPU Ratio:</span>
+              <span id="result-cpugpu">-</span>
+            </div>
+            <div class="result-row">
+              <span>ACR (CPU/GPU):</span>
+              <span id="result-acr">-</span>
+            </div>
+            <div class="result-row">
+              <span>Density (CPU/GPU):</span>
+              <span id="result-density">-</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <style>
+    /* Canvas styling */
+    #rackCanvas {
+      border: 1px solid #ccc;
+      background: #fff;
+    }
+
+    /* Chart container */
+    .chart-container {
+      height: 300px;
+    }
+
+    /* Slider labels styling */
+    .slider-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85em;
+      color: var(--muted-text, #666);
+      margin-top: 4px;
+    }
+  </style>
+</html>
