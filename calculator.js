@@ -10,6 +10,8 @@ const racksPerRowInput = document.getElementById('racks-per-row');
 const coolingSlider = document.getElementById('cooling-slider');
 const coolingLabelDynamic = document.getElementById('cooling-label-dynamic');
 const lcOverrideCheckbox = document.getElementById('lc-override');
+const ahuCost = parseFloat(document.getElementById('ahu-cost').value);
+const cduCost = parseFloat(document.getElementById('cdu-cost').value);
 //
 const ahuCapacitySelect = document.getElementById('ahu-capacity');
 const cduCentralSelect = document.getElementById('cdu-central-capacity');
@@ -105,27 +107,30 @@ updateRackVisualization();
 
 // Bind all relevant events
 [
-  hallSizeSelect,
-  rackSpacingInput,
-  racksPerRowInput,
-  rackDensityCpuSelect,
-  rackDensityGpuSelect,
-  ahuCapacitySelect,
-  cduCentralSelect,
-  cduInRowSelect,
-  acrGpuSlider,
-  acrCpuSlider
+  hallSizeSelect,
+  rackSpacingInput,
+  racksPerRowInput,
+  rackDensityCpuSelect,
+  rackDensityGpuSelect,
+  ahuCapacitySelect,
+  cduCentralSelect,
+  cduInRowSelect,
+  acrGpuSlider,
+  acrCpuSlider,
+  document.getElementById('ahu-cost'),    
+  document.getElementById('cdu-cost'),     
 ].forEach(input => input.addEventListener('input', () => {
-  recalculate();
-  updateAhuCduChart();
-  updateRackVisualization();  // 🛠️ Important addition
-
+  recalculate();
+  updateAhuCduChart();
+  updateRackVisualization();  
+  updateCostChart();
 }));
 
 // Initial run
 recalculate();
 
 let ahuCduChart;
+let costChart;  // for Optimised Cost chart
 
 
 
@@ -155,6 +160,7 @@ coolingSlider.addEventListener('input', () => {
 
   recalculate();
   updateAhuCduChart();
+  updateCostChart();
 });
 
 // Fixed toggle event listener
@@ -180,6 +186,7 @@ cpuGpuSlider.addEventListener('input', () => {
   cpuGpuLabel.textContent = `${cpuPercent}% / ${gpuPercent}%`;
   recalculate();
   updateAhuCduChart();
+  updateCostChart();
 });
 
 
@@ -188,6 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initAhuCduChart();
   recalculate();
   updateRackVisualization();
+  updateCostChart();
 });
 
 
@@ -498,5 +506,160 @@ function updateRackVisualization() {
     ctx.strokeRect(x, bottomY, slotWidth, slotHeight);
     ctx.fillStyle = '#000';
     ctx.fillText(label, x + slotWidth / 2, bottomY + 14);
+  });
+}
+
+function updateCostChart() {
+  if (!document.getElementById('costChart')) return;
+
+  const ctx = document.getElementById('costChart').getContext('2d');
+  const ahuCostVal = parseFloat(document.getElementById('ahu-cost').value);
+  const cduCostVal = parseFloat(document.getElementById('cdu-cost').value);
+
+  const Size_dh = parseFloat(hallSizeSelect.value);
+  const gpuPercent = parseInt(cpuGpuSlider.value) / 100;
+  const cpuPercent = 1 - gpuPercent;
+  const ACR_cpu = parseInt(acrCpuSlider.value) / 100;
+  const ACR_gpu = parseInt(acrGpuSlider.value) / 100;
+
+  const labels = [];
+  const costs = [];
+
+  for (let lc = 0; lc <= 100; lc += 5) {
+    const Ratio_ac = 100 - lc;
+
+    const Size_ac_raw = Size_dh * (Ratio_ac / 100);
+    const Size_lc_raw = Size_dh - Size_ac_raw;
+
+    const Size_lc_cpu = Size_lc_raw * cpuPercent;
+    const Size_lc_gpu = Size_lc_raw * gpuPercent;
+
+    const Size_lc_cpu_liquid = Size_lc_cpu * ACR_cpu;
+    const Size_lc_cpu_air = Size_lc_cpu * (1 - ACR_cpu);
+    const Size_lc_gpu_liquid = Size_lc_gpu * ACR_gpu;
+    const Size_lc_gpu_air = Size_lc_gpu * (1 - ACR_gpu);
+
+    const Size_ac_total = Size_ac_raw + Size_lc_cpu_air + Size_lc_gpu_air;
+    const Size_lc_total = Size_lc_cpu_liquid + Size_lc_gpu_liquid;
+
+    const cost = ahuCostVal * Size_ac_total * 1000 + cduCostVal * Size_lc_total * 1000;
+
+    labels.push(lc);
+    costs.push(cost);
+  }
+
+// Find min cost point with interpolation for better accuracy
+const minCost = Math.min(...costs);
+const maxCost = Math.max(...costs);
+const minIndex = costs.indexOf(minCost);
+let minLCR = labels[minIndex];
+
+// Optional: Interpolate for more precise minimum (parabolic fit)
+if (minIndex > 0 && minIndex < costs.length - 1) {
+  const y1 = costs[minIndex - 1];
+  const y2 = costs[minIndex];
+  const y3 = costs[minIndex + 1];
+  const x1 = labels[minIndex - 1];
+  const x2 = labels[minIndex];
+  const x3 = labels[minIndex + 1];
+  
+  // Parabolic interpolation to find exact minimum
+  const denom = (x1 - x2) * (x1 - x3) * (x2 - x3);
+  if (denom !== 0) {
+    const a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / denom;
+    const b = (x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1) + x1 * x1 * (y2 - y3)) / denom;
+    
+    if (a > 0) { // Ensure it's a minimum (parabola opens upward)
+      const exactMinLCR = -b / (2 * a);
+      if (exactMinLCR >= x1 && exactMinLCR <= x3) {
+        minLCR = exactMinLCR;
+      }
+    }
+  }
+}
+
+const costPerKW = minCost / (Size_dh * 1000);
+
+const annotationLabel = [
+  `Optimal LCR: ${minLCR.toFixed(1)}%`,
+  `Min Cost: $${minCost.toLocaleString(undefined, {maximumFractionDigits: 0})}`,
+  `Max Cost: $${maxCost.toLocaleString(undefined, {maximumFractionDigits: 0})}`,
+];
+
+  // If chart already exists, update it
+  if (costChart) {
+    costChart.data.labels = labels;
+    costChart.data.datasets[0].data = costs;
+    costChart.options.plugins.annotation.annotations.optLine.xMin = minLCR;
+    costChart.options.plugins.annotation.annotations.optLine.xMax = minLCR;
+    costChart.options.plugins.annotation.annotations.optLine.label.content = annotationLabel;
+    costChart.update();
+    return;
+  }
+
+  // Initialize chart
+  costChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+		datasets: [{
+		  label: 'Cooling Cost ($)',
+		  data: costs,
+		  borderColor: '#009688',
+		  borderWidth: 3,
+		  fill: false,
+		  tension: 0.4,  // ← Increased for more curved appearance
+		  pointRadius: 3,
+		  pointHoverRadius: 6,
+		  pointBackgroundColor: '#009688',
+		  pointBorderColor: '#ffffff',
+		  pointBorderWidth: 2
+		}]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'top' },
+        annotation: {
+          annotations: {
+            optLine: {
+              type: 'line',
+              xMin: minLCR,
+              xMax: minLCR,
+              borderColor: 'rgba(0,0,0,0.5)',
+              borderWidth: 2,
+				label: {
+				  content: annotationLabel,
+				  enabled: true,
+				  position: 'top',
+				  backgroundColor: 'rgba(255,255,255,0.95)',
+				  color: '#000',
+				  font: {
+					size: 11,
+					weight: 'bold'
+				  },
+				  padding: 8,
+				  cornerRadius: 4,
+				  borderColor: '#009688',
+				  borderWidth: 1
+				}
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Liquid Cooling Ratio (%)' },
+          min: 0,
+          max: 100,
+          ticks: { stepSize: 10 }
+        },
+        y: {
+          title: { display: true, text: 'Total Cooling Cost ($)' },
+          beginAtZero: true
+        }
+      }
+    }
   });
 }

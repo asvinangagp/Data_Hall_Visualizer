@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta name="robots" content="noindex, nofollow">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Data Hall Visualizer</title>
@@ -42,11 +43,13 @@
         </div>
       </div>
 
-      <!-- Future Expansion Panel -->
-      <div class="viz-panel" id="viz-spare">
-        <h2>Reserved for Expansion</h2>
-        <p class="placeholder-text">[Future metrics or visualization]</p>
-      </div>
+		<!-- Optimised Cost Chart Panel -->
+		<div class="viz-panel" id="viz-cost">
+		  <h2>Cooling Solution Cost vs GPU Ratio</h2>
+		  <div class="chart-container">
+			<canvas id="costChart"></canvas>
+		  </div>
+		</div>
     </section>
 
     <!-- Main Content Area -->
@@ -86,29 +89,37 @@
           </div>
 
           <!-- Cooling Solutions Card -->
-          <div class="control-group">
-            <h3>Cooling Solutions</h3>
-            
-            <label for="cooling-slider">Cooling Ratio:</label>
-            <div class="slider-wrapper">
-              <input type="range" id="cooling-slider" min="0" max="100" step="10" value="0">
-              <div class="slider-mask"></div>
-            </div>
-            
-            <div class="toggle-container">
-              <label class="switch-label">
-                <input type="checkbox" id="lc-override">
-                <span class="slider-toggle"></span>
-                <span class="label-text">Allow 100% Liquid Cooling</span>
-              </label>
-            </div>
-            
-            <div class="slider-labels">
-              <span>100% AC</span>
-              <span id="cooling-label-dynamic">100% / 0%</span>
-              <span>100% LC</span>
-            </div>
-          </div>
+		<div class="control-group">
+		  <h3>Cooling Solutions</h3>
+
+		  <label for="cooling-slider">Cooling Ratio:</label>
+		  <div class="slider-wrapper">
+			<input type="range" id="cooling-slider" min="0" max="100" step="10" value="0">
+			<div class="slider-mask"></div>
+		  </div>
+
+		  <div class="toggle-container">
+			<label class="switch-label">
+			  <input type="checkbox" id="lc-override">
+			  <span class="slider-toggle"></span>
+			  <span class="label-text">Allow 100% Liquid Cooling</span>
+			</label>
+		  </div>
+
+		  <div class="slider-labels">
+			<span>100% AC</span>
+			<span id="cooling-label-dynamic">100% / 0%</span>
+			<span>100% LC</span>
+		  </div>
+
+		  <!-- New: Cooling Unit Cost Inputs -->
+		  <label for="ahu-cost">AHU Cost ($/kW):</label>
+		  <input type="number" id="ahu-cost" value="150" min="0" step="1">
+
+		  <label for="cdu-cost">CDU Cost ($/kW):</label>
+		  <input type="number" id="cdu-cost" value="1200" min="0" step="10">
+		</div>
+
 
           <!-- Equipment Sizing Card -->
           <div class="control-group">
